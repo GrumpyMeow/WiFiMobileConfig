@@ -1,0 +1,318 @@
+<html>
+	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.js"></script>	
+		<style>
+			ul {
+				list-style : none;
+			}
+			
+			li label {
+				width : 200px;
+				display : inline-flex;
+			}
+			
+			input[type='text'] {
+				width : 300px;
+			}
+			
+			select {
+				width : 300px;
+			}
+			
+			input[type='text'].ng-invalid {
+				background-color:red;
+			}
+		</style>
+	</head>
+	<body>
+		<div ng-app="myApp" ng-controller="myCtrl">
+			<form name="form1" novalidate ng-submit="generate()">
+					<h1>Configuration</h1>
+					<ul>
+						<li>
+							<label>Description:</label>
+							<input type="text" ng-model="wifiPayload_description" />
+							<span>A description of the profile, shown on the Detail screen for the profile. This should be descriptive enough to help the user decide whether to install the profile.</span>
+						</li>
+						<li>
+							<label>DisplayName:</label>
+							<input type="text" ng-model="wifiPayload_displayName" />
+							<span>A human-readable name for the profile. This value is displayed on the Detail screen. It does not have to be unique.</span>
+						</li>
+						<li>
+							<label>Identifier:</label>
+							<input type="text" ng-model="wifiPayload_identifier" ng-required="true" />
+							<span>A reverse-DNS style identifier (com.example.myprofile, for example) that identifies the profile. This string is used to determine whether a new profile should replace an existing one or should be added.</span>
+						</li>
+						<li>
+							<label>Organization:</label>
+							<input type="text" ng-model="wifiPayload_organization" />
+							<span>A human-readable string containing the name of the organization that provided the profile.</span>
+						</li>
+						<li>
+							<label>Uuid:</label>
+							<input type="text" ng-model="wifiPayload_uuid" ng-required="true" />
+							<span>Enter a unique guid for this configuration</span>
+						</li>
+					</ul>
+				<h2>WiFi networks</h2>
+				<input type="button" ng-click="addWifiPayload()" value="Add Wifi network" />
+				<ul ng-repeat="wifiPayload in wifiPayloads track by $index">
+					<li>
+						<h3>Network {{$index}}</h3>
+					</li>
+					<li >
+						<label>WiFi SSID:</label>
+						<input type="text" ng-model="wifiPayload.ssid" ng-required="true" ng-change="ssidchange(wifiPayload)" />
+						<span>Enter the SSID name of the WiFi network</span>
+					</li>
+					<li>
+						<label>WiFi Password:</label>
+						<input type="text" ng-model="wifiPayload.password" />
+						<span>Enter the password of the WiFi network</span>
+					</li>
+					<li>
+						<label>AutoJoin</label>				
+						<input type="checkbox" ng-model="wifiPayload.autoJoin" />					
+						<span>Select to automatically connect with the WiFi network. Otherwise manual action is required to connect.</span>
+					</li>
+					<li>						
+						<label>Hidden Network</label>
+						<input type="checkbox" ng-model="wifiPayload.hiddenNetwork" />					
+						<span>Select if this is a hidden WiFi network</span>
+					</li>
+					<li>
+						<label>Encryption Type</label>					
+						<select ng-model="wifiPayload.encryptionType">
+							<option value="Any">Any</option>
+							<option value="WEP">WEP</option>
+							<option value="WPA">WPA/WPA2</option>
+						</select>						
+						<span>Select the security mode of the WiFi network</span>
+					</li>	
+					<li>
+						<label>Description:</label>
+						<input type="text" ng-model="wifiPayload.description" ng-required="true" />
+						<span>Enter the description for the WiFi network</span>
+					</li>
+					<li>
+						<label>DisplayName:</label>
+						<input type="text" ng-model="wifiPayload.displayName" ng-required="true" />
+						<span>Enter the displayname for the WiFi network</span>
+					</li>
+					<li>
+						<label>Identifier:</label>
+						<input type="text" ng-model="wifiPayload.identifier" ng-required="true" />
+						<span>Enter the identifier for the WiFi network</span>
+					</li>
+					<li>
+						<label>Organization:</label>
+						<input type="text" ng-model="wifiPayload.organization" />
+						<span>Enter the organization name for the WiFi network</span>
+					</li>								
+					<li>
+						<label>Uuid:</label>
+						<input type="text" ng-model="wifiPayload.uuid" ng-required="true" />
+						<span>Enter a unique guid for the WiFi network</span>
+					</li>								
+				</ul>
+					
+				
+				<input type="submit" ng-disabled="!form1.$valid" value="Generate mobileconfig file"/>
+			</form>
+			
+		</div>
+		
+		<script type="text/javascript">
+			var app = angular.module('myApp', []);
+
+			var newline = "\r\n";
+			
+			app.controller('myCtrl', function($scope) {
+				$scope.wifiPayloads = [];
+
+				$scope.wifiPayload_description = "Configures wireless connectivity settings.";
+				$scope.wifiPayload_displayName = "WiFi Configuration";
+				$scope.wifiPayload_identifier = "wifi.wifi";
+				$scope.wifiPayload_organization = "";
+				$scope.wifiPayload_uuid = newGuid();
+
+				$scope.addWifiPayload = function () {
+					$scope.wifiPayloads.push({
+									description : "",
+									displayName : "WiFi",
+									identifier : "wifi.wifi",
+									organization : "",
+									ssid : null,
+									password : null,
+									autoJoin : false,
+									hiddenNetwork : false,
+									encryptionType : "WPA",
+									uuid : newGuid()
+					});
+				}
+				
+				$scope.ssidchange = function(wifipayload) {
+					wifipayload.description = "Configuration for " + wifipayload.ssid;
+					wifipayload.displayName = wifipayload.ssid;
+					wifipayload.identifier = $scope.wifiPayload_identifier + "." + wifipayload.ssid;
+				};
+				
+				$scope.generate = function() {
+					downloadFile('settings.mobileconfig',generateMobileConfig($scope),'application/x-apple-aspen-config');
+				};
+				
+				function S4() {
+					return (((1+Math.random())*0x10000)|0).toString(16).substring(1); 
+				}
+ 
+				function newGuid() {
+					// then to call it, plus stitch in '4' in the third group
+					var guid = (S4() + S4() + "-" + S4() + "-4" + S4().substr(0,3) + "-" + S4() + "-" + S4() + S4() + S4()).toLowerCase();
+					return guid;
+				}
+				
+				function downloadFile(fileName, data, strMimeType) {
+					var D = document;
+					var a = D.createElement('a');
+					strMimeType = strMimeType || 'application/octet-stream;charset=utf-8';
+					var rawFile;
+
+					// IE10+
+					if (navigator.msSaveBlob) {
+						return navigator.msSaveBlob(new Blob([data], {
+							type: strMimeType
+						}), fileName);
+					}
+
+					//html5 A[download]
+					if ('download' in a) {
+						var blob = new Blob([data], {
+							type: strMimeType
+						});
+						rawFile = URL.createObjectURL(blob);
+						a.setAttribute('download', fileName);
+					} else {
+						rawFile = 'data:' + strMimeType + ',' + encodeURIComponent(data);
+						a.setAttribute('target', '_blank');
+					}
+
+					a.href = rawFile;
+					a.setAttribute('style', 'display:none;');
+					D.body.appendChild(a);
+					setTimeout(function() {
+						if (a.click) {
+							a.click();
+							// Workaround for Safari 5
+						} else if (document.createEvent) {
+							var eventObj = document.createEvent('MouseEvents');
+							eventObj.initEvent('click', true, true);
+							a.dispatchEvent(eventObj);
+						}
+						D.body.removeChild(a);
+
+					}, 100);
+				}
+				
+			});
+			
+			function createKeyStringValue(keyvalue , value)
+			{
+				return createXmlElement("key",keyvalue) + newline + createXmlElement("string",value) + newline;
+			}
+			
+			function createKeyIntegerValue(keyvalue , value)
+			{
+				return createXmlElement("key",keyvalue) + newline + createXmlElement("integer",value) + newline;
+			}
+			
+			function createKeyBoolValue(keyvalue , value)
+			{
+				return createXmlElement("key",keyvalue) + newline + "<" + value +"/>" + newline;
+			}
+			
+			function createXmlElement(node,value) {
+				return "<" + node + ">" + value + "</" + node + ">" + newline;
+			}
+			
+			function generateMobileConfig($scope) {
+				var mc = "";
+				mc += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + newline;
+				mc += "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" + newline;
+				mc += "<plist version=\"1.0\">" + newline;
+				mc += "   <dict>" + newline;
+				
+				if ($scope.wifiPayloads) {
+					mc += generatePayloadsWifi($scope);
+				}
+				
+				mc += "   </dict>" + newline;
+				mc += "</plist>" + newline;
+				
+				return mc;	
+			}
+
+			function generatePayloadsWifi($scope) {
+				var mc = "";
+				
+				mc += "      <key>PayloadContent</key>" + newline;
+				mc += "      <array>" + newline;
+				
+				angular.forEach($scope.wifiPayloads, function(wifiPayload, key) {
+					mc += "         <dict>" + newline;
+					
+					mc += createKeyBoolValue("AutoJoin", wifiPayload.autoJoin);					
+					mc += createKeyStringValue("EncryptionType", wifiPayload.encryptionType);
+					mc += createKeyBoolValue("HIDDEN_NETWORK", wifiPayload.hiddenNetwork);										
+					
+					if (wifiPayload.password!=="") {
+						mc += createKeyStringValue("Password", wifiPayload.password);
+					} 					
+					
+					mc += createKeyStringValue("PayloadDescription", wifiPayload.description);
+					mc += createKeyStringValue("PayloadDisplayName", wifiPayload.displayName);
+					mc += createKeyStringValue("PayloadIdentifier", wifiPayload.identifier);
+					mc += createKeyStringValue("PayloadOrganization", wifiPayload.organization);
+					mc += createKeyStringValue("PayloadType", "com.apple.wifi.managed");
+					mc += createKeyStringValue("PayloadUUID", wifiPayload.uuid);
+					mc += createKeyIntegerValue("PayloadVersion", 1);
+					mc += createKeyStringValue("ProxyType", "None");
+					mc += createKeyStringValue("SSID_STR", wifiPayload.ssid);
+					
+					mc += "         </dict>" + newline;
+				});
+				
+				mc += "      </array>" + newline;
+				
+				if ($scope.wifiPayload_description!=="") {
+					mc += createKeyStringValue("PayloadDescription", $scope.wifiPayload_description);
+				}
+				
+				if ($scope.wifiPayload_displayName!=="") {
+					mc += createKeyStringValue("PayloadDisplayName", $scope.wifiPayload_displayName);
+				}
+				
+				if ($scope.wifiPayload_identifier!=="") {
+					mc += createKeyStringValue("PayloadIdentifier", $scope.wifiPayload_identifier);
+				}
+				
+				if ($scope.wifiPayload_organization!=="") {
+					mc += createKeyStringValue("PayloadOrganization", $scope.wifiPayload_organization);
+				}
+				
+				mc += createKeyBoolValue("PayloadRemovalDisallowed", false);
+				mc += createKeyStringValue("PayloadType", "Configuration");
+				mc += createKeyStringValue("PayloadUUID", $scope.wifiPayload_uuid);
+				mc += createKeyIntegerValue("PayloadVersion", 1);
+			
+				return mc;
+			}
+
+		</script>
+		<footer>
+			<p>Created by Sander Schutten.</p>
+			<p><a href="https://www.linkedin.com/in/schutten">https://www.linkedin.com/in/schutten</a></p>
+			<p><a href="https://github.com/SanderSchutten/WiFiMobileConfig">https://github.com/SanderSchutten/WiFiMobileConfig</a></p>
+		</footer>
+	</body>
+</html>
